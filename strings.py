@@ -28,7 +28,8 @@ def _load():
     s = dict(_DEFAULTS)
     if LOCALE_FILE and os.path.exists(LOCALE_FILE):
         try:
-            with open(LOCALE_FILE, encoding="utf-8") as f:
+            # utf-8-sig tolerates a leading BOM (e.g. when the JSON arrives via a secret)
+            with open(LOCALE_FILE, encoding="utf-8-sig") as f:
                 s.update(json.load(f))
         except (OSError, ValueError) as e:
             print(f"[WARN] Could not read locale file {LOCALE_FILE}: {e}")
