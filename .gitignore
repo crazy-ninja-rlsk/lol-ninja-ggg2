@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+
+# Secrets / local config
+.env
+
+# Local-only data that could identify the monitored source (never commit)
+*.local.json
+
+# Bot data
+*.db
+
+# Generated reports
+report_*.xlsx
+
+# OS
+.DS_Store
+Thumbs.db
