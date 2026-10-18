@@ -15,7 +15,9 @@ concurrency:
 jobs:
   run:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # The run loops internally (~5h cap) to hold a steady cadence despite
+    # unreliable cron; kept under GitHub's 6h job limit.
+    timeout-minutes: 340
     steps:
       - uses: actions/checkout@v4
 
@@ -40,8 +42,8 @@ jobs:
         env:
           LOCALE_JSON: ${{ secrets.LOCALE_JSON }}
 
-      - name: Run one pass
-        run: python main.py
+      - name: Run (internal loop holds the ~20-min cadence)
+        run: python main.py --ci-loop
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}

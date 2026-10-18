@@ -58,3 +58,11 @@ TOP_N = 10
 # Network
 REQUEST_TIMEOUT = 30
 FETCH_WORKERS = int(os.getenv("FETCH_WORKERS", "10"))
+
+# --- CI internal loop (works around unreliable Actions cron) ---
+# Each CI run loops, calling a pass every CI_LOOP_TICK_SECONDS, until the day is
+# done or CI_MAX_RUN_SECONDS elapses (kept under the 6h job cap). Cron only has
+# to start a run; the 20-min cadence is held by the loop itself.
+CI_LOOP_TICK_SECONDS = int(os.getenv("CI_LOOP_TICK_SECONDS", "300"))   # 5 min
+CI_MAX_RUN_SECONDS = int(os.getenv("CI_MAX_RUN_SECONDS", "18000"))     # 5 h
+CI_LOOP_UNTIL = time(21, 30)   # stop after evening slot + daily report are done
