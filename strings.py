@@ -21,7 +21,10 @@ _DEFAULTS = {
     "daily_top_sales": "🔻 TOP-10 sales:",
     "daily_top_arrivals": "🔺 TOP-10 arrivals:",
     "daily_top_item": "{n}. {entry} — {qty} pcs",
-    "excel_sheets": ["Summary", "Daily movement", "Top arrivals", "Top sales"],
+    "daily_price_list": "💲 Price changes:",
+    "daily_status_list": "🔄 Status changes:",
+    "daily_list_item": "• {entry}: {detail}",
+    "excel_sheets": ["Summary", "Top arrivals", "Top sales", "Price changes", "Status changes"],
 }
 
 

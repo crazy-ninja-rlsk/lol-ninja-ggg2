@@ -45,23 +45,37 @@ def init_db():
             publisher TEXT,
             kind TEXT NOT NULL,
             qty INTEGER DEFAULT 0,
+            detail TEXT DEFAULT '',
             ts TEXT NOT NULL
         )
     ''')
     c.execute('CREATE INDEX IF NOT EXISTS idx_daily_date ON daily_changes(date, kind)')
+    # migrate older cached DBs that predate the detail column
+    cols = [r[1] for r in c.execute("PRAGMA table_info(daily_changes)").fetchall()]
+    if "detail" not in cols:
+        c.execute("ALTER TABLE daily_changes ADD COLUMN detail TEXT DEFAULT ''")
     # simple key/value state (last-run per tier, fired daily slots)
     c.execute('CREATE TABLE IF NOT EXISTS kv (key TEXT PRIMARY KEY, value TEXT)')
     conn.commit()
     conn.close()
 
 
-def record_change(date, variant_id, title, publisher, kind, qty=0):
+def record_change(date, variant_id, title, publisher, kind, qty=0, detail=""):
     conn = _conn()
-    conn.execute('INSERT INTO daily_changes (date, variant_id, title, publisher, kind, qty, ts) '
-                 'VALUES (?, ?, ?, ?, ?, ?, ?)',
-                 (date, variant_id, title, publisher, kind, qty, datetime.now().isoformat()))
+    conn.execute('INSERT INTO daily_changes (date, variant_id, title, publisher, kind, qty, detail, ts) '
+                 'VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+                 (date, variant_id, title, publisher, kind, qty, detail, datetime.now().isoformat()))
     conn.commit()
     conn.close()
+
+
+def daily_list(date, kind):
+    """All changes of a kind for the day, with their detail text."""
+    conn = _conn()
+    rows = conn.execute('SELECT title, publisher, detail FROM daily_changes '
+                        'WHERE date=? AND kind=? ORDER BY ts ASC', (date, kind)).fetchall()
+    conn.close()
+    return [{"title": r[0], "publisher": r[1], "detail": r[2] or ""} for r in rows]
 
 
 def daily_stats(date):

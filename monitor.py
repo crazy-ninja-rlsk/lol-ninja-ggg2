@@ -24,7 +24,8 @@ from classify import tier_for
 from analytics import calculate_delta
 from discovery import discover_catalog
 from fetcher import fetch_many
-from report_telegram import send_check_delta_report, send_daily_report, fmt_price
+from report_telegram import (send_check_delta_report, send_daily_report,
+                             send_telegram_document, fmt_price)
 from report_excel import generate_daily_excel
 
 
@@ -106,11 +107,13 @@ def run_tier(tier, now):
         if "price_change" in delta:
             prev, cur = delta["price_change"]
             item["price_change"] = f"{fmt_price(prev)} -> {fmt_price(cur)}"
-            db.record_change(date, r["variant_id"], r["title"], r["publisher"], "price_change")
+            db.record_change(date, r["variant_id"], r["title"], r["publisher"],
+                             "price_change", detail=item["price_change"])
         if "status_change" in delta:
             prev, cur = delta["status_change"]
             item["status_change"] = f"{prev} -> {cur}"
-            db.record_change(date, r["variant_id"], r["title"], r["publisher"], "status_change")
+            db.record_change(date, r["variant_id"], r["title"], r["publisher"],
+                             "status_change", detail=item["status_change"])
         changes.append(item)
 
     send_check_delta_report(now.strftime("%H:%M"), changes)
@@ -124,13 +127,17 @@ def emit_daily_report(now):
     stats = db.daily_stats(date)
     top_sales = db.daily_top(date, "sale", TOP_N)
     top_arrivals = db.daily_top(date, "arrival", TOP_N)
+    price_changes = db.daily_list(date, "price_change")
+    status_changes = db.daily_list(date, "status_change")
     if SEND_DAILY_REPORT:
-        send_daily_report(date, stats, top_sales, top_arrivals)
+        send_daily_report(date, stats, top_sales, top_arrivals, price_changes, status_changes)
     try:
-        fn = generate_daily_excel(date, stats, top_sales, top_arrivals)
-        print(f"[{now:%H:%M}] daily report sent; excel {fn}")
+        fn = generate_daily_excel(date, stats, top_sales, top_arrivals,
+                                  price_changes, status_changes)
+        send_telegram_document(fn, caption=f"{date}")
+        print(f"[{now:%H:%M}] daily report + excel sent ({fn})")
     except Exception as e:
-        print(f"[WARN] excel failed: {e}")
+        print(f"[WARN] excel/send failed: {e}")
 
 
 # --- the single pass -------------------------------------------------------
