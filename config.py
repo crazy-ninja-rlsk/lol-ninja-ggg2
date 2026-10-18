@@ -64,12 +64,7 @@ FETCH_WORKERS = int(os.getenv("FETCH_WORKERS", "10"))
 # done or CI_MAX_RUN_SECONDS elapses (kept under the 6h job cap). Cron only has
 # to start a run; the 20-min cadence is held by the loop itself.
 CI_LOOP_TICK_SECONDS = int(os.getenv("CI_LOOP_TICK_SECONDS", "300"))   # 5 min
-CI_MAX_RUN_SECONDS = int(os.getenv("CI_MAX_RUN_SECONDS", "19800"))     # 5.5 h (< 6h cap)
+# Exit cleanly before the job timeout so the cache-save post-step runs; the
+# next (queued) block then takes over via the concurrency queue — no PAT needed.
+CI_MAX_RUN_SECONDS = int(os.getenv("CI_MAX_RUN_SECONDS", "20400"))     # 5h40m (< 355m timeout)
 CI_LOOP_UNTIL = time(21, 30)   # stop after evening slot + daily report are done
-
-# Hand off to the next block when the time cap is hit (needs a PAT, since the
-# default GITHUB_TOKEN cannot re-trigger a workflow). Set via the DISPATCH_PAT
-# secret; without it the workflow relies on cron to start the next block.
-DISPATCH_PAT = os.getenv("DISPATCH_PAT", "")
-GITHUB_REPOSITORY = os.getenv("GITHUB_REPOSITORY", "")
-WORKFLOW_FILE = os.getenv("WORKFLOW_FILE", "monitor.yml")

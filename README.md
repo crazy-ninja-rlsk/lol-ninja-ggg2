@@ -67,7 +67,10 @@ Set repository **Secrets**: `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`,
 templates as JSON).
 The workflow in `.github/workflows/monitor.yml` is started by cron, then loops
 internally (a pass every few minutes, HOT every 20 min) until end of day or a
-~5h cap — this holds a steady cadence despite GitHub's best-effort (often
-delayed) scheduler. The DB is persisted between runs via the Actions cache; the
-catalog (and learned years) persists, only snapshot history is trimmed to
-`RETAIN_DAYS` days.
+~5h40m cap. While a block runs, scheduled triggers queue via `concurrency`
+(`cancel-in-progress: false`), so the next block starts the moment the current
+one exits — covering the day in 6h+6h style with no gap and no extra token. A
+`keepalive` step re-enables the schedule so GitHub does not pause it after 60
+idle days. The DB is persisted between runs via the Actions cache; the catalog
+(and learned years) persists, only snapshot history is trimmed to `RETAIN_DAYS`
+days.

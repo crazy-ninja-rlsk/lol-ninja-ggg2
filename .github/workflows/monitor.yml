@@ -2,28 +2,33 @@ name: monitor
 
 on:
   schedule:
-    # Every 20 minutes, Mon–Fri, roughly covering the market work window
-    # (UTC 06:00–18:00 ≈ Kyiv 08:00–21:00). Exact gating is done in code by
-    # the market-local time, so timezone/DST never breaks the schedule.
-    - cron: "*/20 6-18 * * 1-5"
+    # Every 20 minutes. The run loops internally; while one block is running,
+    # scheduled triggers queue (concurrency) and the next one takes over the
+    # moment the current block exits — covering the day in 6h+6h style.
+    - cron: "*/20 * * * *"
   workflow_dispatch: {}
 
+permissions:
+  contents: read
+  actions: write
+
 concurrency:
-  group: monitor
+  # one long block at a time; the next scheduled run waits in the queue and
+  # starts as soon as the current block ends (no PAT needed for the handoff)
+  group: ${{ github.event_name == 'schedule' && 'loop' || format('manual-{0}', github.run_id) }}
   cancel-in-progress: false
 
 jobs:
   run:
     runs-on: ubuntu-latest
-    # The run loops internally (~5.5h cap) and hands off to the next block,
-    # covering the day in 6h+6h style; kept under GitHub's 6h job limit.
-    timeout-minutes: 350
+    timeout-minutes: 355   # just under GitHub's 6h job cap
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+          cache: pip
 
       - name: Install dependencies
         run: pip install -r requirements.txt
@@ -42,7 +47,7 @@ jobs:
         env:
           LOCALE_JSON: ${{ secrets.LOCALE_JSON }}
 
-      - name: Run (internal loop holds the ~20-min cadence)
+      - name: Run (internal loop holds the ~20-min cadence; queue chains blocks)
         run: python main.py --ci-loop
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
@@ -52,6 +57,10 @@ jobs:
           LOCALE_FILE: locale.local.json
           FETCH_WORKERS: "10"
           RETAIN_DAYS: "3"
-          # Optional: PAT with Actions:write so a finishing block can start the
-          # next one (6h+6h chaining). Without it, cron starts the next block.
-          DISPATCH_PAT: ${{ secrets.DISPATCH_PAT }}
+
+      # Scheduled workflows in inactive public repos are paused after 60 days.
+      - name: Keepalive (re-enable schedule)
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh api -X PUT "repos/${{ github.repository }}/actions/workflows/monitor.yml/enable" > /dev/null 2>&1 || true
