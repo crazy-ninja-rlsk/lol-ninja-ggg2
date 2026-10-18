@@ -12,6 +12,12 @@ def fmt_price(value):
         return str(value)
 
 
+def _label(title, publisher):
+    """'Title (Publisher)', or just 'Title' when the publisher is unknown."""
+    pub = (publisher or "").strip()
+    return f"{title} ({pub})" if pub and pub.lower() != "none" else f"{title}"
+
+
 def send_telegram_message(text):
     if not TELEGRAM_BOT_TOKEN or TELEGRAM_BOT_TOKEN == "YOUR_TELEGRAM_BOT_TOKEN":
         print("[TG MOCK]:", text[:120].replace("\n", " ") + "...")
@@ -40,7 +46,9 @@ def send_check_delta_report(check_time_str, changes_list):
         return
     msg = t("check_header", time=check_time_str) + "\n\n"
     for item in changes_list:
-        msg += f"• <b>{item['title']}</b> ({item['publisher']})\n"
+        pub = (item.get("publisher") or "").strip()
+        suffix = f" ({pub})" if pub and pub.lower() != "none" else ""
+        msg += f"• <b>{item['title']}</b>{suffix}\n"
         if item.get("type") == "sale":
             msg += "   " + t("sale", qty=item["qty"], price=fmt_price(item["price"])) + "\n"
         elif item.get("type") == "arrival":
@@ -57,8 +65,8 @@ def _top_block(header_key, top_list):
         return ""
     lines = [t(header_key)]
     for i, it in enumerate(top_list, 1):
-        lines.append(t("daily_top_item", n=i, title=it["title"],
-                       publisher=it["publisher"], qty=it["qty"]))
+        lines.append(t("daily_top_item", n=i, entry=_label(it["title"], it["publisher"]),
+                       qty=it["qty"]))
     return "\n".join(lines)
 
 

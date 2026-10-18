@@ -12,6 +12,6 @@
   "daily_no_movement": "No movement recorded today.",
   "daily_top_sales": "🔻 TOP-10 sales:",
   "daily_top_arrivals": "🔺 TOP-10 arrivals:",
-  "daily_top_item": "{n}. {title} ({publisher}) — {qty} pcs",
+  "daily_top_item": "{n}. {entry} — {qty} pcs",
   "excel_sheets": ["Summary", "Daily movement", "Top arrivals", "Top sales"]
 }
