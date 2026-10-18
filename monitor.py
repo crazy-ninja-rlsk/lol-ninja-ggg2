@@ -17,7 +17,7 @@ loop without a long-running process.
 from datetime import datetime, timedelta
 
 from config import (TZ, WORK_DAYS, WORK_START_TIME, WORK_END_TIME, EVENING_TIME,
-                    TIER_INTERVAL_MINUTES, TWICE_DAILY_TIER, DAILY_TIER,
+                    REPORT_TIME, TIER_INTERVAL_MINUTES, TWICE_DAILY_TIER, DAILY_TIER,
                     SEND_DAILY_REPORT, TOP_N, RETAIN_DAYS)
 import db
 from classify import tier_for
@@ -170,8 +170,8 @@ def run_once():
     if t >= EVENING_TIME and not _slot_done(f"twice_evening:{date}"):
         run_tier(TWICE_DAILY_TIER, now); _mark_slot(f"twice_evening:{date}")
 
-    # 4) Daily report after the work window ends
-    if t >= WORK_END_TIME and not _slot_done(f"report:{date}"):
+    # 4) Daily report after the evening slot, so it includes the whole day
+    if t >= REPORT_TIME and not _slot_done(f"report:{date}"):
         emit_daily_report(now); _mark_slot(f"report:{date}")
 
 

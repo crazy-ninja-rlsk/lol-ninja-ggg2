@@ -32,6 +32,7 @@ WORK_DAYS = [0, 1, 2, 3, 4]            # Mon..Fri
 WORK_START_TIME = time(9, 0)
 WORK_END_TIME = time(19, 30)
 EVENING_TIME = time(20, 0)             # second fixed-time slot (TWICE_DAILY)
+REPORT_TIME = time(20, 30)            # daily report — after the evening slot
 
 # --- Tier cadence (minutes) for interval tiers ---
 TIER_INTERVAL_MINUTES = {

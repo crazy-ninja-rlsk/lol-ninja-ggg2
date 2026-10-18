@@ -42,9 +42,12 @@ def _split(text, limit):
 
 
 def send_check_delta_report(check_time_str, changes_list):
-    if not changes_list:
-        return
+    """Send an instant report after every check — even when nothing moved
+    (an empty 'no movement' ping, so it is clear the check ran)."""
     msg = t("check_header", time=check_time_str) + "\n\n"
+    if not changes_list:
+        send_telegram_message(msg + t("check_no_movement"))
+        return
     for item in changes_list:
         pub = (item.get("publisher") or "").strip()
         suffix = f" ({pub})" if pub and pub.lower() != "none" else ""

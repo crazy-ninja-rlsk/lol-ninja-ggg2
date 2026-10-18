@@ -12,6 +12,7 @@ _DEFAULTS = {
     "arrival": "🔺 Arrival: +{qty} pcs × {price}",
     "price_change": "💲 Price change: {change}",
     "status_change": "🔄 Status: {change}",
+    "check_no_movement": "No movement.",
     "daily_sales": "🔻 Sales: {count} ({qty} pcs)",
     "daily_arrivals": "🔺 Arrivals: {count} ({qty} pcs)",
     "daily_price_changes": "💲 Price changes: {count}",
