@@ -15,9 +15,9 @@ concurrency:
 jobs:
   run:
     runs-on: ubuntu-latest
-    # The run loops internally (~5h cap) to hold a steady cadence despite
-    # unreliable cron; kept under GitHub's 6h job limit.
-    timeout-minutes: 340
+    # The run loops internally (~5.5h cap) and hands off to the next block,
+    # covering the day in 6h+6h style; kept under GitHub's 6h job limit.
+    timeout-minutes: 350
     steps:
       - uses: actions/checkout@v4
 
@@ -52,3 +52,6 @@ jobs:
           LOCALE_FILE: locale.local.json
           FETCH_WORKERS: "10"
           RETAIN_DAYS: "3"
+          # Optional: PAT with Actions:write so a finishing block can start the
+          # next one (6h+6h chaining). Without it, cron starts the next block.
+          DISPATCH_PAT: ${{ secrets.DISPATCH_PAT }}
