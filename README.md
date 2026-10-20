@@ -26,8 +26,12 @@ stores snapshots, and reports via Telegram. Runs serverless on GitHub Actions
 | TWICE_DAILY | other recent-year | work start + evening |
 | DAILY | older | once a day |
 
-All cadence gating uses the market's local time (`TZ_NAME`), so DST never
-breaks the schedule. Work window and years are set in `config.py`.
+By default it runs **round the clock, every day** (`ROUND_THE_CLOCK=1`): HOT
+every 20 min and HOURLY run 24/7 (the source refreshes at night), the catalog
+refresh + DAILY tier run once a day just after midnight, TWICE_DAILY at 09:00
+and 20:00, and the daily report at 20:30. Set `ROUND_THE_CLOCK=0` to fall back
+to a Mon–Fri 09:00–19:30 window. All gating uses the market's local time
+(`TZ_NAME`), so DST never breaks it. Years and times are set in `config.py`.
 
 ## How data is obtained
 

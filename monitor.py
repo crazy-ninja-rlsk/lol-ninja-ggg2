@@ -17,8 +17,8 @@ loop without a long-running process.
 from datetime import datetime, timedelta
 
 from config import (TZ, WORK_DAYS, WORK_START_TIME, WORK_END_TIME, EVENING_TIME,
-                    REPORT_TIME, TIER_INTERVAL_MINUTES, TWICE_DAILY_TIER, DAILY_TIER,
-                    SEND_DAILY_REPORT, TOP_N, RETAIN_DAYS)
+                    REPORT_TIME, ROUND_THE_CLOCK, TIER_INTERVAL_MINUTES,
+                    TWICE_DAILY_TIER, DAILY_TIER, SEND_DAILY_REPORT, TOP_N, RETAIN_DAYS)
 import db
 from classify import tier_for
 from analytics import calculate_delta
@@ -38,6 +38,8 @@ def _is_work_day(now):
 
 
 def _in_work_window(now):
+    if ROUND_THE_CLOCK:
+        return True   # HOT/HOURLY run around the clock
     return _is_work_day(now) and WORK_START_TIME <= now.time() <= WORK_END_TIME
 
 
@@ -153,8 +155,9 @@ def run_once():
         print("Not a work day — nothing to do.")
         return
 
-    # 1) Catalog refresh once a day (first run from work start onwards)
-    if t >= WORK_START_TIME and not _slot_done(f"catalog:{date}"):
+    # 1) Catalog refresh once a day (24/7: first run after midnight; otherwise
+    #    from work start onwards)
+    if (ROUND_THE_CLOCK or t >= WORK_START_TIME) and not _slot_done(f"catalog:{date}"):
         try:
             refresh_catalog()
             db.prune_snapshots((now - timedelta(days=RETAIN_DAYS)).isoformat())
@@ -172,7 +175,8 @@ def run_once():
     # 3) Fixed-time tiers
     if t >= WORK_START_TIME and not _slot_done(f"twice_morning:{date}"):
         run_tier(TWICE_DAILY_TIER, now); _mark_slot(f"twice_morning:{date}")
-    if t >= WORK_START_TIME and not _slot_done(f"daily:{date}"):
+    # DAILY (older books) once a day: 24/7 right after midnight, else at work start
+    if (ROUND_THE_CLOCK or t >= WORK_START_TIME) and not _slot_done(f"daily:{date}"):
         run_tier(DAILY_TIER, now); _mark_slot(f"daily:{date}")
     if t >= EVENING_TIME and not _slot_done(f"twice_evening:{date}"):
         run_tier(TWICE_DAILY_TIER, now); _mark_slot(f"twice_evening:{date}")

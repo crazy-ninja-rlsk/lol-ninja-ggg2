@@ -26,9 +26,14 @@ RETAIN_DAYS = int(os.getenv("RETAIN_DAYS", "3"))
 # Local-only text templates (localized); English defaults live in strings.py
 LOCALE_FILE = os.getenv("LOCALE_FILE", "locale.local.json")
 
-# --- Timezone & work window (local time of the monitored market) ---
+# --- Timezone & schedule (local time of the monitored market) ---
 TZ = ZoneInfo(os.getenv("TZ_NAME", "Europe/Kyiv"))
-WORK_DAYS = [0, 1, 2, 3, 4]            # Mon..Fri
+
+# Round-the-clock: HOT/HOURLY run 24/7 every day (the source refreshes at night).
+# Set to "0" to fall back to the WORK_DAYS / work-window schedule below.
+ROUND_THE_CLOCK = os.getenv("ROUND_THE_CLOCK", "1") == "1"
+
+WORK_DAYS = [0, 1, 2, 3, 4, 5, 6] if ROUND_THE_CLOCK else [0, 1, 2, 3, 4]
 WORK_START_TIME = time(9, 0)
 WORK_END_TIME = time(19, 30)
 EVENING_TIME = time(20, 0)             # second fixed-time slot (TWICE_DAILY)

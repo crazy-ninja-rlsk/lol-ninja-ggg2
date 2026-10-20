@@ -12,7 +12,7 @@ import time as _time
 from datetime import datetime
 
 from config import (TZ, WORK_DAYS, CI_LOOP_TICK_SECONDS, CI_MAX_RUN_SECONDS,
-                    CI_LOOP_UNTIL)
+                    CI_LOOP_UNTIL, ROUND_THE_CLOCK)
 from monitor import run_once
 
 
@@ -24,12 +24,13 @@ def _ci_loop():
         except Exception as e:
             print(f"[ERROR] pass failed: {e}")
         now = datetime.now(TZ)
-        if now.weekday() not in WORK_DAYS:
-            print("Not a work day — exiting loop.")
-            return
-        if now.time() >= CI_LOOP_UNTIL:
-            print("Day finished — exiting loop.")
-            return
+        if not ROUND_THE_CLOCK:
+            if now.weekday() not in WORK_DAYS:
+                print("Not a work day — exiting loop.")
+                return
+            if now.time() >= CI_LOOP_UNTIL:
+                print("Day finished — exiting loop.")
+                return
         if _time.monotonic() - start >= CI_MAX_RUN_SECONDS:
             print("Time cap reached — exiting; the next queued block continues.")
             return
