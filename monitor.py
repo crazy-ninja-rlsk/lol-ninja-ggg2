@@ -25,7 +25,7 @@ from analytics import calculate_delta
 from discovery import discover_catalog
 from fetcher import fetch_many
 from report_telegram import (send_check_delta_report, send_daily_report,
-                             send_telegram_document, fmt_price)
+                             send_telegram_document, send_error, fmt_price)
 from report_excel import generate_daily_excel
 
 
@@ -121,8 +121,25 @@ def run_tier(tier, now):
     send_check_delta_report(now.strftime("%H:%M"), changes)
     print(f"[{now:%H:%M}] ({tier}) checked {len(results)}, changes {len(changes)}, errors {len(errors)}")
 
+    # Alert only on a broad failure (e.g. the source is down) — not a few stray pages
+    if products and len(errors) >= max(10, len(products) // 2):
+        send_error(f"{tier} {now:%H:%M}: {len(errors)}/{len(products)} fetches failed "
+                   f"(source may be down). Example: {errors[0][1] if errors else ''}")
+
 
 # --- daily report ----------------------------------------------------------
+
+def _safe_tier(tier, now):
+    """Run a tier; on an unexpected failure send an error alert and keep going."""
+    try:
+        run_tier(tier, now)
+    except Exception as e:
+        print(f"[ERROR] tier {tier} failed: {e}")
+        try:
+            send_error(f"{tier} {now:%H:%M}: {e}")
+        except Exception:
+            pass
+
 
 def emit_daily_report(now):
     date = now.date().isoformat()
@@ -164,26 +181,38 @@ def run_once():
             _mark_slot(f"catalog:{date}")
         except Exception as e:
             print(f"[ERROR] catalog refresh failed: {e}")
+            try:
+                send_error(f"catalog refresh {now:%H:%M}: {e}")
+            except Exception:
+                pass
 
     # 2) Interval tiers during the work window
     if _in_work_window(now):
         if _interval_due("HOT", now, TIER_INTERVAL_MINUTES["HOT"]):
-            run_tier("HOT", now); _mark_interval("HOT", now)
+            _safe_tier("HOT", now); _mark_interval("HOT", now)
         if _interval_due("HOURLY", now, TIER_INTERVAL_MINUTES["HOURLY"]):
-            run_tier("HOURLY", now); _mark_interval("HOURLY", now)
+            _safe_tier("HOURLY", now); _mark_interval("HOURLY", now)
 
     # 3) Fixed-time tiers
     if t >= WORK_START_TIME and not _slot_done(f"twice_morning:{date}"):
-        run_tier(TWICE_DAILY_TIER, now); _mark_slot(f"twice_morning:{date}")
+        _safe_tier(TWICE_DAILY_TIER, now); _mark_slot(f"twice_morning:{date}")
     # DAILY (older books) once a day: 24/7 right after midnight, else at work start
     if (ROUND_THE_CLOCK or t >= WORK_START_TIME) and not _slot_done(f"daily:{date}"):
-        run_tier(DAILY_TIER, now); _mark_slot(f"daily:{date}")
+        _safe_tier(DAILY_TIER, now); _mark_slot(f"daily:{date}")
     if t >= EVENING_TIME and not _slot_done(f"twice_evening:{date}"):
-        run_tier(TWICE_DAILY_TIER, now); _mark_slot(f"twice_evening:{date}")
+        _safe_tier(TWICE_DAILY_TIER, now); _mark_slot(f"twice_evening:{date}")
 
     # 4) Daily report after the evening slot, so it includes the whole day
     if t >= REPORT_TIME and not _slot_done(f"report:{date}"):
-        emit_daily_report(now); _mark_slot(f"report:{date}")
+        try:
+            emit_daily_report(now)
+        except Exception as e:
+            print(f"[ERROR] daily report failed: {e}")
+            try:
+                send_error(f"daily report {now:%H:%M}: {e}")
+            except Exception:
+                pass
+        _mark_slot(f"report:{date}")
 
 
 if __name__ == "__main__":
